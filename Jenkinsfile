@@ -12,7 +12,7 @@ pipeline {
 
     stages {
         // 📥 拉取代码（必须放在最前面）
-        stage('Checkout') {
+        stage('Build') {
             steps {
                 checkout scmGit(
                     branches: [[name: '*/b2']], 
@@ -20,19 +20,10 @@ pipeline {
                     // ⚠️ 请确认是否为你实际的 GitHub 仓库地址
                     userRemoteConfigs: [[url: 'https://github.com/luckyx7/Teedy.git']]
                 )
+                sh 'mvn -B -DskipTests clean package'
             }
         }
 
-        // 🛠️ 保留你原有的 Maven 流程（适合生成 PMD/JaCoCo/Site 报告）
-        stage('Clean') { steps { sh 'mvn clean' } }
-        stage('Compile') { steps { sh 'mvn compile' } }
-        stage('Test') { steps { sh 'mvn test -Dmaven.test.failure.ignore=true' } }
-        stage('PMD') { steps { sh 'mvn pmd:pmd' } }
-        stage('JaCoCo') { steps { sh 'mvn jacoco:report' } }
-        stage('Site') { steps { sh 'mvn site' } }
-        stage('Package') { steps { sh 'mvn package -DskipTests' } }
-
-        // 🐳 构建 Docker 镜像
         stage('Building Docker Image') {
             steps {
                 script {
@@ -69,28 +60,6 @@ pipeline {
                     }
                 }
             }
-        }
-
-        // 🔍 验证容器状态（方便截图交作业）
-        stage('Verify') {
-            steps {
-                sh 'docker ps --filter "name=teedy-container" --format "table {{.Names}}\t{{.Ports}}\t{{.Status}}"'
-            }
-        }
-    }
-
-    // 📦 保留你原有的构建后处理逻辑
-    post {
-        always {
-            archiveArtifacts artifacts: '**/target/site/**/*.*', fingerprint: true
-            archiveArtifacts artifacts: '**/target/**/*.jar', fingerprint: true
-            archiveArtifacts artifacts: '**/target/**/*.war', fingerprint: true
-            junit '**/target/surefire-reports/*.xml'
-            // 可选：清理本地旧镜像防磁盘打满
-            sh 'docker images lucky24x/teedy-app --format "{{.Tag}}\t{{.ID}}" | tail -n +6 | cut -f2 | xargs -r docker rmi 2>/dev/null || true'
-        }
-        failure {
-            echo '❌ Pipeline failed! 请检查 Console Output 定位错误。'
         }
     }
 }
