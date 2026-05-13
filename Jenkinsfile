@@ -15,7 +15,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scmGit(
-                    branches: [[name: '*/master']], 
+                    branches: [[name: '*/b2']], 
                     extensions: [], 
                     // ⚠️ 请确认是否为你实际的 GitHub 仓库地址
                     userRemoteConfigs: [[url: 'https://github.com/luckyx7/Teedy.git']]
